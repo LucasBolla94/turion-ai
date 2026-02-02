@@ -136,6 +136,32 @@ def _service_active(name: str) -> bool:
         return False
 
 
+def _service_start(name: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["systemctl", "start", name],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def _service_logs(name: str, lines: int = 120) -> str:
+    try:
+        result = subprocess.run(
+            ["journalctl", "-u", name, "-n", str(lines), "--no-pager"],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        return result.stdout.strip() or result.stderr.strip()
+    except Exception:
+        return ""
+
+
 def _preflight_services() -> bool:
     ok = True
     for svc in ["bot-ai.service", "bot-ai-gateway.service"]:
@@ -146,8 +172,13 @@ def _preflight_services() -> bool:
 
 def _run_qr_flow(settings: Settings) -> bool:
     if not _preflight_services():
-        print("Serviços não estão ativos. Rode: turion doctor")
-        return False
+        print("Serviços não estão ativos. Tentando iniciar...")
+        _service_start("bot-ai.service")
+        _service_start("bot-ai-gateway.service")
+        time.sleep(2)
+        if not _preflight_services():
+            print("Serviços ainda não ativos. Rode: turion doctor")
+            return False
 
     print("Conecte o WhatsApp escaneando o QR abaixo.\n")
 
@@ -158,12 +189,13 @@ def _run_qr_flow(settings: Settings) -> bool:
         print("  sudo journalctl -u bot-ai-gateway.service -f")
         return False
 
-    # Tenta obter QR via HTTP, com retry simples
     # initial QR fetch before websocket
-    for _ in range(5):
+    last_qr = None
+    for _ in range(8):
         qr_text = _fetch_qr(gateway_url, settings.whatsapp_api_key)
         if qr_text:
             _render_qr(qr_text)
+            last_qr = qr_text
             break
         time.sleep(2)
 
@@ -176,7 +208,6 @@ def _run_qr_flow(settings: Settings) -> bool:
         except Exception as exc:
             print(f"Não foi possível escutar eventos do gateway: {exc}.")
             print("Usando fallback HTTP para QR/status.")
-            last_qr = None
             while True:
                 status = _fetch_status(gateway_url, settings.whatsapp_api_key)
                 if status == "connected":
@@ -187,6 +218,11 @@ def _run_qr_flow(settings: Settings) -> bool:
                     last_qr = qr_text
                     _render_qr(qr_text)
                     print("Leia o QR no WhatsApp para conectar.")
+                if not qr_text:
+                    print("QR ainda não gerado. Últimos logs do gateway:")
+                    logs = _service_logs("bot-ai-gateway.service", 40)
+                    if logs:
+                        print(logs)
                 time.sleep(3)
 
 
