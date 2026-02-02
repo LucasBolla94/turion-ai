@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 APP_DIR="/opt/bot-ai"
@@ -158,6 +158,7 @@ cp scripts/bot-ai-gateway.service "$GATEWAY_SERVICE_FILE"
 cat > /usr/local/bin/turion <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+cd /opt/bot-ai
 /opt/bot-ai/.venv/bin/python -m src.cli "$@"
 EOF
 chmod +x /usr/local/bin/turion
@@ -170,6 +171,7 @@ echo "Installed and started bot-ai.service and bot-ai-gateway.service"
 
 if [[ -t 1 ]]; then
   echo "Iniciando setup interativo..."
+  cd /opt/bot-ai
   /opt/bot-ai/.venv/bin/python -m src.cli setup || true
 else
   echo "Instalação sem TTY. Rode: turion setup"

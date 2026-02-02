@@ -1,4 +1,4 @@
-﻿[Unit]
+[Unit]
 Description=Bot AI WhatsApp Gateway
 After=network.target
 
