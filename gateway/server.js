@@ -5,6 +5,8 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
+import fs from "fs";
+import path from "path";
 
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.API_KEY || "";
@@ -46,6 +48,7 @@ const logger = pino({ level: "info" });
 let sock;
 let currentQR = null;
 let currentStatus = "disconnected";
+const AUTH_DIR = "./data";
 
 async function startSocket() {
   const { state, saveCreds } = await useMultiFileAuthState("./data");
@@ -73,6 +76,7 @@ async function startSocket() {
 
     if (update.connection === "close") {
       currentStatus = "disconnected";
+      currentQR = null;
       broadcast({ type: "status", data: "disconnected" });
       startSocket().catch(() => {});
     }
@@ -95,6 +99,22 @@ async function startSocket() {
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.get("/qr", requireKey, (_req, res) => res.json({ qr: currentQR }));
 app.get("/status", requireKey, (_req, res) => res.json({ status: currentStatus }));
+
+app.post("/reset", requireKey, (_req, res) => {
+  try {
+    const full = path.resolve(AUTH_DIR);
+    if (fs.existsSync(full)) {
+      fs.rmSync(full, { recursive: true, force: true });
+    }
+    currentQR = null;
+    currentStatus = "disconnected";
+    res.json({ ok: true });
+    // let systemd restart the process
+    process.exit(0);
+  } catch (err) {
+    res.status(500).json({ ok: false });
+  }
+});
 
 app.post("/send", requireKey, async (req, res) => {
   const { to, text } = req.body || {};

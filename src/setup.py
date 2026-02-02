@@ -123,6 +123,17 @@ def _fetch_status(gateway_url: str, api_key: str | None) -> Optional[str]:
     return None
 
 
+def _post_reset(gateway_url: str, api_key: str | None) -> bool:
+    headers = {}
+    if api_key:
+        headers["x-api-key"] = api_key
+    try:
+        resp = requests.post(f"{gateway_url}/reset", headers=headers, timeout=5)
+        return resp.ok
+    except Exception:
+        return False
+
+
 def _service_active(name: str) -> bool:
     try:
         result = subprocess.run(
@@ -191,6 +202,7 @@ def _run_qr_flow(settings: Settings) -> bool:
 
     # simple and reliable: HTTP polling only
     last_qr = None
+    no_qr_cycles = 0
     while True:
         status = _fetch_status(gateway_url, settings.whatsapp_api_key)
         if status == "connected":
@@ -201,11 +213,20 @@ def _run_qr_flow(settings: Settings) -> bool:
             last_qr = qr_text
             _render_qr(qr_text)
             print("Leia o QR no WhatsApp para conectar.")
+            no_qr_cycles = 0
         if not qr_text:
+            no_qr_cycles += 1
             print("QR ainda não gerado. Últimos logs do gateway:")
             logs = _service_logs("bot-ai-gateway.service", 40)
             if logs:
                 print(logs)
+            if no_qr_cycles >= 5 and sys.stdin.isatty():
+                ans = _ask("Nenhum QR detectado. Resetar sessão do WhatsApp? (isso apaga login)", "N")
+                if ans.lower() in {"y", "yes", "s", "sim"}:
+                    if _post_reset(gateway_url, settings.whatsapp_api_key):
+                        print("Sessão resetada. Aguardando novo QR...")
+                        no_qr_cycles = 0
+                        time.sleep(3)
         time.sleep(3)
 
 
