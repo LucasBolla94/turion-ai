@@ -159,6 +159,7 @@ cat > /usr/local/bin/turion <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 cd /opt/bot-ai
+export PYTHONPATH=/opt/bot-ai/src
 /opt/bot-ai/.venv/bin/python -m src.cli "$@"
 EOF
 chmod +x /usr/local/bin/turion
@@ -172,6 +173,7 @@ echo "Installed and started bot-ai.service and bot-ai-gateway.service"
 if [[ -t 1 ]]; then
   echo "Iniciando setup interativo..."
   cd /opt/bot-ai
+  export PYTHONPATH=/opt/bot-ai/src
   /opt/bot-ai/.venv/bin/python -m src.cli setup || true
 else
   echo "Instalação sem TTY. Rode: turion setup"
