@@ -108,7 +108,10 @@ open_firewall_ports() {
 open_firewall_ports
 
 mkdir -p "$APP_DIR"
+# copy including dotfiles (like .env.example)
+shopt -s dotglob
 cp -r ./* "$APP_DIR"
+shopt -u dotglob
 
 python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
