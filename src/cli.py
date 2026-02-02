@@ -8,6 +8,7 @@ import sys
 from dataclasses import dataclass
 from typing import Iterable
 
+import psycopg2
 import requests
 
 from config.settings import Settings
@@ -46,6 +47,31 @@ def _check_gateway(url: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
+def _check_db(settings: Settings) -> tuple[bool, str]:
+    if not settings.db_password:
+        return False, "DB_PASSWORD vazio"
+    try:
+        conn = psycopg2.connect(
+            host=settings.db_host,
+            port=settings.db_port,
+            dbname=settings.db_name,
+            user=settings.db_user,
+            password=settings.db_password,
+            connect_timeout=5,
+        )
+        with conn.cursor() as cur:
+            cur.execute("select to_regclass('public.memory_items')")
+            has_memory = cur.fetchone()[0] is not None
+            cur.execute("select to_regclass('public.user_profiles')")
+            has_profile = cur.fetchone()[0] is not None
+        conn.close()
+        if not has_memory or not has_profile:
+            return False, "schema incompleto"
+        return True, "conexão ok e schema ok"
+    except Exception as exc:
+        return False, str(exc)
+
+
 def doctor() -> int:
     settings = Settings.load()
     results: list[CheckResult] = []
@@ -65,6 +91,12 @@ def doctor() -> int:
     else:
         results.append(CheckResult("npm", False, "não encontrado"))
 
+    if _which("psql"):
+        psql_v = _run(["psql", "-V"]).stdout.strip()
+        results.append(CheckResult("psql", True, psql_v))
+    else:
+        results.append(CheckResult("psql", False, "não encontrado"))
+
     venv_ok = os.path.exists("/opt/bot-ai/.venv/bin/python")
     results.append(CheckResult("venv", venv_ok, "/opt/bot-ai/.venv/bin/python"))
 
@@ -77,6 +109,9 @@ def doctor() -> int:
     if settings.whatsapp_gateway_url:
         health_ok, health_detail = _check_gateway(settings.whatsapp_gateway_url)
         results.append(CheckResult("gateway health", health_ok, health_detail))
+
+    db_ok, db_detail = _check_db(settings)
+    results.append(CheckResult("db", db_ok, db_detail))
 
     ok_all = True
     for r in results:
