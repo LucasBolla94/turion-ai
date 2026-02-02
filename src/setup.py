@@ -261,26 +261,30 @@ def _save_profile(settings: Settings, answers: SetupAnswers) -> None:
     memory.add_message(answers.user_id, "system", f"Idioma: {answers.language}")
 
 
-def _update_env_api_key(settings: Settings, api_key: str) -> None:
+def _update_env_api_key(settings: Settings, api_key: str) -> bool:
     if not api_key:
-        return
+        return False
     env_path = os.path.join("/opt/bot-ai", ".env")
     if not os.path.exists(env_path):
-        return
-    with open(env_path, "r", encoding="utf-8") as f:
-        lines = f.read().splitlines()
-    updated = False
-    out = []
-    for line in lines:
-        if line.startswith("LLM_API_KEY="):
+        return False
+    try:
+        with open(env_path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        updated = False
+        out = []
+        for line in lines:
+            if line.startswith("LLM_API_KEY="):
+                out.append(f"LLM_API_KEY={api_key}")
+                updated = True
+            else:
+                out.append(line)
+        if not updated:
             out.append(f"LLM_API_KEY={api_key}")
-            updated = True
-        else:
-            out.append(line)
-    if not updated:
-        out.append(f"LLM_API_KEY={api_key}")
-    with open(env_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out) + "\n")
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(out) + "\n")
+        return True
+    except PermissionError:
+        return False
 
 
 def run_setup() -> int:
@@ -313,7 +317,11 @@ def run_setup() -> int:
     )
 
     if answers.llm_api_key:
-        _update_env_api_key(settings, answers.llm_api_key)
+        if not _update_env_api_key(settings, answers.llm_api_key):
+            print("Não consegui salvar a API key em /opt/bot-ai/.env (permissão).")
+            print("Rode um destes comandos e tente novamente:")
+            print("  sudo sed -i 's/^LLM_API_KEY=.*/LLM_API_KEY=SEU_TOKEN/' /opt/bot-ai/.env")
+            print("  ou rode: sudo turion setup")
 
     _save_profile(settings, answers)
     print("Configuração salva. Você pode começar a conversar.\n")
