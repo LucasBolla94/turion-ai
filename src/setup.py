@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -84,15 +85,43 @@ async def _listen_events(gateway_url: str, api_key: str | None) -> None:
                 return
 
 
+def _wait_gateway_ready(gateway_url: str, api_key: str | None, timeout_sec: int = 30) -> bool:
+    headers = {}
+    if api_key:
+        headers["x-api-key"] = api_key
+    start = asyncio.get_event_loop().time() if asyncio.get_event_loop().is_running() else None
+    elapsed = 0.0
+    while elapsed <= timeout_sec:
+        try:
+            resp = requests.get(f"{gateway_url}/health", headers=headers, timeout=5)
+            if resp.ok:
+                return True
+        except Exception:
+            pass
+        time.sleep(2)
+        elapsed += 2
+    return False
+
+
 def _run_qr_flow(settings: Settings) -> None:
     print("Conecte o WhatsApp escaneando o QR abaixo.\n")
 
-    qr_text = _fetch_qr(settings.whatsapp_gateway_url or "", settings.whatsapp_api_key)
-    if qr_text:
-        _render_qr(qr_text)
+    gateway_url = settings.whatsapp_gateway_url or ""
+    if not _wait_gateway_ready(gateway_url, settings.whatsapp_api_key):
+        print("Gateway não respondeu no /health. Verifique o serviço:")
+        print("  sudo systemctl status bot-ai-gateway.service")
+        print("  sudo journalctl -u bot-ai-gateway.service -f")
+
+    # Tenta obter QR via HTTP, com retry simples
+    for _ in range(5):
+        qr_text = _fetch_qr(gateway_url, settings.whatsapp_api_key)
+        if qr_text:
+            _render_qr(qr_text)
+            break
+        time.sleep(2)
 
     try:
-        asyncio.run(_listen_events(settings.whatsapp_gateway_url or "", settings.whatsapp_api_key))
+        asyncio.run(_listen_events(gateway_url, settings.whatsapp_api_key))
     except Exception:
         print("Não foi possível escutar eventos do gateway. Verifique o serviço.")
 
