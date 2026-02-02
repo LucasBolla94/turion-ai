@@ -14,6 +14,20 @@ fi
 apt-get update -y
 apt-get install -y python3 python3-venv python3-pip curl ca-certificates tar postgresql openssl
 
+prompt_reinstall() {
+  if [[ -d "$APP_DIR" || -d "$GATEWAY_DIR" ]]; then
+    if [[ -t 0 && -t 1 ]]; then
+      read -r -p "Instalação existente encontrada. Reinstalar tudo? (isso apaga /opt/bot-ai) [y/N]: " REINSTALL
+      if [[ "$REINSTALL" == "y" || "$REINSTALL" == "Y" ]]; then
+        systemctl stop bot-ai.service bot-ai-gateway.service >/dev/null 2>&1 || true
+        rm -rf "$APP_DIR" "$GATEWAY_DIR"
+      fi
+    fi
+  fi
+}
+
+prompt_reinstall
+
 install_node_lts() {
   if command -v node >/dev/null 2>&1; then
     return 0
@@ -170,7 +184,7 @@ systemctl restart bot-ai.service bot-ai-gateway.service
 
 echo "Installed and started bot-ai.service and bot-ai-gateway.service"
 
-if [[ -t 1 ]]; then
+if [[ -t 0 && -t 1 ]]; then
   echo "Iniciando setup interativo..."
   cd /opt/bot-ai
   export PYTHONPATH=/opt/bot-ai/src
