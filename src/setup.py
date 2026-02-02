@@ -91,7 +91,6 @@ def _wait_gateway_ready(gateway_url: str, api_key: str | None, timeout_sec: int 
     headers = {}
     if api_key:
         headers["x-api-key"] = api_key
-    start = asyncio.get_event_loop().time() if asyncio.get_event_loop().is_running() else None
     elapsed = 0.0
     while elapsed <= timeout_sec:
         try:
@@ -103,6 +102,19 @@ def _wait_gateway_ready(gateway_url: str, api_key: str | None, timeout_sec: int 
         time.sleep(2)
         elapsed += 2
     return False
+
+
+def _fetch_status(gateway_url: str, api_key: str | None) -> Optional[str]:
+    headers = {}
+    if api_key:
+        headers["x-api-key"] = api_key
+    try:
+        resp = requests.get(f"{gateway_url}/status", headers=headers, timeout=5)
+        if resp.ok:
+            return resp.json().get("status")
+    except Exception:
+        return None
+    return None
 
 
 def _service_active(name: str) -> bool:
@@ -155,9 +167,21 @@ def _run_qr_flow(settings: Settings) -> bool:
             connected = asyncio.run(_listen_events(gateway_url, settings.whatsapp_api_key))
             if connected:
                 return True
-        except Exception:
-            print("Não foi possível escutar eventos do gateway. Tentando novamente...")
-            time.sleep(2)
+        except Exception as exc:
+            print(f"Não foi possível escutar eventos do gateway: {exc}.")
+            print("Usando fallback HTTP para QR/status.")
+            last_qr = None
+            while True:
+                status = _fetch_status(gateway_url, settings.whatsapp_api_key)
+                if status == "connected":
+                    print("WhatsApp conectado.\n")
+                    return True
+                qr_text = _fetch_qr(gateway_url, settings.whatsapp_api_key)
+                if qr_text and qr_text != last_qr:
+                    last_qr = qr_text
+                    _render_qr(qr_text)
+                    print("Leia o QR no WhatsApp para conectar.")
+                time.sleep(3)
 
 
 def _save_profile(settings: Settings, answers: SetupAnswers) -> None:

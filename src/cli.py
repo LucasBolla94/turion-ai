@@ -60,6 +60,19 @@ def _check_gateway(url: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
+def _check_gateway_qr(url: str) -> tuple[bool, str]:
+    try:
+        resp = requests.get(f"{url}/qr", timeout=5)
+        if not resp.ok:
+            return False, f"/qr status {resp.status_code}"
+        data = resp.json()
+        if data.get("qr"):
+            return True, "qr disponível"
+        return False, "qr vazio (ainda não gerado)"
+    except Exception as exc:
+        return False, str(exc)
+
+
 def _check_db(settings: Settings) -> tuple[bool, str]:
     if not settings.db_password:
         return False, "DB_PASSWORD vazio"
@@ -122,6 +135,8 @@ def doctor_all() -> int:
     if settings.whatsapp_gateway_url:
         health_ok, health_detail = _check_gateway(settings.whatsapp_gateway_url)
         results.append(CheckResult("gateway health", health_ok, health_detail))
+        qr_ok, qr_detail = _check_gateway_qr(settings.whatsapp_gateway_url)
+        results.append(CheckResult("gateway qr", qr_ok, qr_detail))
 
     db_ok, db_detail = _check_db(settings)
     results.append(CheckResult("db", db_ok, db_detail))

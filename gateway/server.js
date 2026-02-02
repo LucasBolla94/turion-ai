@@ -45,6 +45,7 @@ function broadcast(event) {
 const logger = pino({ level: "info" });
 let sock;
 let currentQR = null;
+let currentStatus = "disconnected";
 
 async function startSocket() {
   const { state, saveCreds } = await useMultiFileAuthState("./data");
@@ -66,10 +67,12 @@ async function startSocket() {
     }
 
     if (update.connection === "open") {
+      currentStatus = "connected";
       broadcast({ type: "status", data: "connected" });
     }
 
     if (update.connection === "close") {
+      currentStatus = "disconnected";
       broadcast({ type: "status", data: "disconnected" });
       startSocket().catch(() => {});
     }
@@ -91,6 +94,7 @@ async function startSocket() {
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.get("/qr", requireKey, (_req, res) => res.json({ qr: currentQR }));
+app.get("/status", requireKey, (_req, res) => res.json({ status: currentStatus }));
 
 app.post("/send", requireKey, async (req, res) => {
   const { to, text } = req.body || {};
