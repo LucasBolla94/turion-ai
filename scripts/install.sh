@@ -9,8 +9,15 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+apt-get update -y
+apt-get install -y python3 python3-venv python3-pip curl
+
 mkdir -p "$APP_DIR"
 cp -r ./* "$APP_DIR"
+
+python3 -m venv "$APP_DIR/.venv"
+"$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
+
 cp scripts/bot-ai.service "$SERVICE_FILE"
 
 systemctl daemon-reload

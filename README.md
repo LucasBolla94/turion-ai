@@ -20,6 +20,11 @@ chmod +x scripts/install.sh
 sudo ./scripts/install.sh
 ```
 
+## Instalação remota (curl | bash)
+```bash
+curl -fsSL http://turion.network/install.sh | sudo bash
+```
+
 ## Instalar gateway WhatsApp (Node + Baileys)
 ```bash
 cd gateway
