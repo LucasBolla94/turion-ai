@@ -12,6 +12,7 @@ import psycopg2
 import requests
 
 from config.settings import Settings
+from setup import run_setup
 
 
 @dataclass
@@ -133,6 +134,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     doctor_sub.add_parser("all", help="verifica tudo")
     doctor_sub.add_parser("db", help="verifica banco de dados")
 
+    sub.add_parser("setup", help="wizard de configuração inicial")
+
     args = parser.parse_args(argv)
     if args.cmd == "doctor":
         if args.doctor_cmd is None or args.doctor_cmd == "all":
@@ -143,6 +146,9 @@ def main(argv: Iterable[str] | None = None) -> int:
             print(f"[{status}] db: {detail}")
             return 0 if ok else 1
         return 1
+
+    if args.cmd == "setup":
+        return run_setup()
 
     return 0
 

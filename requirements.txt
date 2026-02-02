@@ -5,3 +5,4 @@ websockets
 psycopg2-binary
 rank-bm25
 rapidfuzz
+segno

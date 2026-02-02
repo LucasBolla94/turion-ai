@@ -13,6 +13,7 @@ Estrutura base para um "cérebro" de IA que coordena ferramentas, memória e exe
 - `src/daemon_main.py`: daemon (cérebro) em background
 - `src/tui_main.py`: TUI cliente simples
 - `src/cli.py`: CLI (ex: `turion doctor`)
+- `src/setup.py`: wizard de configuração inicial
 - `gateway/`: WhatsApp Gateway (Node + Baileys)
 
 ## Instalar cérebro no Ubuntu (systemd)
@@ -31,6 +32,11 @@ curl -fsSL http://turion.network/install.sh | sudo bash
 turion doctor          # inspeção completa
 turion doctor all      # inspeção completa
 turion doctor db       # inspeção do banco
+```
+
+## Setup inicial
+```bash
+turion setup
 ```
 
 ## Memória local (PostgreSQL)

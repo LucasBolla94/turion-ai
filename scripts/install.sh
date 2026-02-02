@@ -144,3 +144,10 @@ systemctl enable bot-ai.service bot-ai-gateway.service
 systemctl restart bot-ai.service bot-ai-gateway.service
 
 echo "Installed and started bot-ai.service and bot-ai-gateway.service"
+
+if [[ -t 1 ]]; then
+  echo "Iniciando setup interativo..."
+  /opt/bot-ai/.venv/bin/python -m src.cli setup || true
+else
+  echo "Instalação sem TTY. Rode: turion setup"
+fi
