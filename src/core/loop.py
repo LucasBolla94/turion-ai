@@ -3,15 +3,17 @@
 from config.settings import Settings
 from channels.whatsapp_gateway import WhatsAppConfig, WhatsAppGateway
 from channels.base import InboundMessage
-
-
-def _on_message(msg: InboundMessage) -> None:
-    # TODO: passar mensagem para o cérebro e responder
-    print(f"[{msg.channel}] {msg.sender}: {msg.text}")
+from core.brain import Brain
 
 
 def run_loop(settings: Settings) -> None:
     print("Agent iniciado. Modo:", settings.mode)
+
+    brain = Brain.build(settings)
+
+    def _on_message(msg: InboundMessage) -> None:
+        reply = brain.handle(settings.memory_user_id, msg.text)
+        wa.send(msg.sender, reply)
 
     wa = WhatsAppGateway(
         WhatsAppConfig(

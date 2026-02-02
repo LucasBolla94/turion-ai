@@ -12,7 +12,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 apt-get update -y
-apt-get install -y python3 python3-venv python3-pip curl ca-certificates tar
+apt-get install -y python3 python3-venv python3-pip curl ca-certificates tar postgresql openssl
 
 install_node_lts() {
   if command -v node >/dev/null 2>&1; then
@@ -28,7 +28,6 @@ url = "https://nodejs.org/dist/index.json"
 with urllib.request.urlopen(url, timeout=10) as resp:
     data = json.loads(resp.read().decode("utf-8"))
 
-# pick latest v24 LTS
 for entry in data:
     v = entry["version"]
     if v.startswith("v24") and entry.get("lts"):
@@ -97,6 +96,26 @@ python3 -m venv "$APP_DIR/.venv"
 if [[ ! -f "$APP_DIR/.env" ]]; then
   cp "$APP_DIR/.env.example" "$APP_DIR/.env"
 fi
+
+DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$APP_DIR/.env" | cut -d'=' -f2-)
+if [[ -z "$DB_PASSWORD" ]]; then
+  DB_PASSWORD=$(openssl rand -hex 16)
+  sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=$DB_PASSWORD/" "$APP_DIR/.env"
+fi
+
+# postgres setup (local-only)
+DB_NAME=$(grep -E '^DB_NAME=' "$APP_DIR/.env" | cut -d'=' -f2-)
+DB_USER=$(grep -E '^DB_USER=' "$APP_DIR/.env" | cut -d'=' -f2-)
+
+sudo -u postgres psql -tAc "select 1 from pg_roles where rolname='$DB_USER'" | grep -q 1 || \
+  sudo -u postgres psql -c "create user $DB_USER with password '$DB_PASSWORD';"
+
+sudo -u postgres psql -tAc "select 1 from pg_database where datname='$DB_NAME'" | grep -q 1 || \
+  sudo -u postgres psql -c "create database $DB_NAME owner $DB_USER;"
+
+sudo -u postgres psql -d "$DB_NAME" -c "grant all privileges on database $DB_NAME to $DB_USER;"
+
+psql "postgresql://$DB_USER:$DB_PASSWORD@127.0.0.1:5432/$DB_NAME" -f "$APP_DIR/docs/postgres.sql"
 
 mkdir -p "$GATEWAY_DIR"
 cp -r "$APP_DIR/gateway"/* "$GATEWAY_DIR"

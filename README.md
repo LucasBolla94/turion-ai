@@ -31,12 +31,9 @@ curl -fsSL http://turion.network/install.sh | sudo bash
 turion doctor
 ```
 
-## Instalar gateway WhatsApp (Node + Baileys) manual
-```bash
-cd gateway
-chmod +x install.sh
-sudo ./install.sh
-```
+## Memória local (PostgreSQL)
+- SQL: `docs/postgres.sql`
+- Estratégia: `docs/memory.md`
 
 ## Rodar manual
 ```bash

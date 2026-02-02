@@ -1,0 +1,1 @@
+﻿-- Deprecated: Supabase schema removed. Use docs/postgres.sql
