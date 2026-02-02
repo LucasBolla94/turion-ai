@@ -62,7 +62,7 @@ def _wait_for_connected() -> None:
     print("Aguardando conexão do WhatsApp...")
 
 
-async def _listen_events(gateway_url: str, api_key: str | None) -> None:
+async def _listen_events(gateway_url: str, api_key: str | None) -> bool:
     ws_url = gateway_url.replace("http://", "ws://").replace("https://", "wss://")
     ws_url = f"{ws_url}/events"
     headers = {}
@@ -83,7 +83,8 @@ async def _listen_events(gateway_url: str, api_key: str | None) -> None:
                     print("Leia o QR no WhatsApp para conectar.")
             if payload.get("type") == "status" and payload.get("data") == "connected":
                 print("WhatsApp conectado.\n")
-                return
+                return True
+    return False
 
 
 def _wait_gateway_ready(gateway_url: str, api_key: str | None, timeout_sec: int = 30) -> bool:
@@ -125,10 +126,10 @@ def _preflight_services() -> bool:
     return ok
 
 
-def _run_qr_flow(settings: Settings) -> None:
+def _run_qr_flow(settings: Settings) -> bool:
     if not _preflight_services():
         print("Serviços não estão ativos. Rode: turion doctor")
-        return
+        return False
 
     print("Conecte o WhatsApp escaneando o QR abaixo.\n")
 
@@ -137,8 +138,10 @@ def _run_qr_flow(settings: Settings) -> None:
         print("Gateway não respondeu no /health. Verifique o serviço:")
         print("  sudo systemctl status bot-ai-gateway.service")
         print("  sudo journalctl -u bot-ai-gateway.service -f")
+        return False
 
     # Tenta obter QR via HTTP, com retry simples
+    # initial QR fetch before websocket
     for _ in range(5):
         qr_text = _fetch_qr(gateway_url, settings.whatsapp_api_key)
         if qr_text:
@@ -146,10 +149,15 @@ def _run_qr_flow(settings: Settings) -> None:
             break
         time.sleep(2)
 
-    try:
-        asyncio.run(_listen_events(gateway_url, settings.whatsapp_api_key))
-    except Exception:
-        print("Não foi possível escutar eventos do gateway. Verifique o serviço.")
+    # wait until user connects; show updated QR whenever gateway sends
+    while True:
+        try:
+            connected = asyncio.run(_listen_events(gateway_url, settings.whatsapp_api_key))
+            if connected:
+                return True
+        except Exception:
+            print("Não foi possível escutar eventos do gateway. Tentando novamente...")
+            time.sleep(2)
 
 
 def _save_profile(settings: Settings, answers: SetupAnswers) -> None:
@@ -217,7 +225,8 @@ def run_setup() -> int:
         print("WHATSAPP_GATEWAY_URL não configurado no .env")
         return 1
 
-    _run_qr_flow(settings)
+    if not _run_qr_flow(settings):
+        return 1
 
     answers = SetupAnswers(
         user_id=_ask("User ID", settings.memory_user_id),
