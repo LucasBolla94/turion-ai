@@ -69,11 +69,11 @@ async def _listen_events(gateway_url: str, api_key: str | None) -> bool:
     if api_key:
         headers["x-api-key"] = api_key
 
-    # websockets API differs across versions (extra_headers vs headers)
+    # websockets API differs across versions (additional_headers vs extra_headers)
     try:
-        ws_cm = websockets.connect(ws_url, extra_headers=headers)
+        ws_cm = websockets.connect(ws_url, additional_headers=headers)
     except TypeError:
-        ws_cm = websockets.connect(ws_url, headers=headers)
+        ws_cm = websockets.connect(ws_url, extra_headers=headers)
 
     async with ws_cm as ws:
         async for message in ws:

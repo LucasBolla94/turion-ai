@@ -58,7 +58,12 @@ class WhatsAppGateway(Channel):
             headers["x-api-key"] = self.config.api_key
 
         async def _inner() -> None:
-            async with websockets.connect(ws_url, extra_headers=headers) as ws:
+            # websockets API differs across versions (additional_headers vs extra_headers)
+            try:
+                ws_cm = websockets.connect(ws_url, additional_headers=headers)
+            except TypeError:
+                ws_cm = websockets.connect(ws_url, extra_headers=headers)
+            async with ws_cm as ws:
                 async for message in ws:
                     payload = json.loads(message)
                     if payload.get("type") == "qr":
