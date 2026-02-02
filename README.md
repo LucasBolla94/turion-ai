@@ -28,7 +28,8 @@ curl -fsSL http://turion.network/install.sh | sudo bash
 
 ## Comando de diagnóstico
 ```bash
-turion doctor
+turion doctor all
+turion doctor db
 ```
 
 ## Memória local (PostgreSQL)

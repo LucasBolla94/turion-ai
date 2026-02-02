@@ -72,7 +72,7 @@ def _check_db(settings: Settings) -> tuple[bool, str]:
         return False, str(exc)
 
 
-def doctor() -> int:
+def doctor_all() -> int:
     settings = Settings.load()
     results: list[CheckResult] = []
 
@@ -128,11 +128,20 @@ def main(argv: Iterable[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd")
     sub.required = True
 
-    sub.add_parser("doctor", help="verifica dependências e serviços")
+    doctor_parser = sub.add_parser("doctor", help="diagnóstico do sistema")
+    doctor_sub = doctor_parser.add_subparsers(dest="doctor_cmd")
+    doctor_sub.required = True
+    doctor_sub.add_parser("all", help="verifica tudo")
+    doctor_sub.add_parser("db", help="verifica banco de dados")
 
     args = parser.parse_args(argv)
     if args.cmd == "doctor":
-        return doctor()
+        if args.doctor_cmd == "db":
+            ok, detail = _check_db(Settings.load())
+            status = "OK" if ok else "FAIL"
+            print(f"[{status}] db: {detail}")
+            return 0 if ok else 1
+        return doctor_all()
 
     return 0
 
