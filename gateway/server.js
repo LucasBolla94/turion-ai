@@ -3,7 +3,6 @@ import { WebSocketServer } from "ws";
 import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  makeInMemoryStore,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 
@@ -44,8 +43,6 @@ function broadcast(event) {
 }
 
 const logger = pino({ level: "info" });
-const store = makeInMemoryStore({ logger });
-
 let sock;
 let currentQR = null;
 
@@ -59,8 +56,6 @@ async function startSocket() {
     logger,
     printQRInTerminal: true,
   });
-
-  store.bind(sock.ev);
 
   sock.ev.on("creds.update", saveCreds);
 
