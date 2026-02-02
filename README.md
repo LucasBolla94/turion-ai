@@ -12,6 +12,7 @@ Estrutura base para um "cérebro" de IA que coordena ferramentas, memória e exe
 - `src/channels`: canais de comunicação (WhatsApp, Telegram, etc.)
 - `src/daemon_main.py`: daemon (cérebro) em background
 - `src/tui_main.py`: TUI cliente simples
+- `src/cli.py`: CLI (ex: `turion doctor`)
 - `gateway/`: WhatsApp Gateway (Node + Baileys)
 
 ## Instalar cérebro no Ubuntu (systemd)
@@ -25,7 +26,12 @@ sudo ./scripts/install.sh
 curl -fsSL http://turion.network/install.sh | sudo bash
 ```
 
-## Instalar gateway WhatsApp (Node + Baileys)
+## Comando de diagnóstico
+```bash
+turion doctor
+```
+
+## Instalar gateway WhatsApp (Node + Baileys) manual
 ```bash
 cd gateway
 chmod +x install.sh

@@ -1,0 +1,16 @@
+﻿[Unit]
+Description=Bot AI WhatsApp Gateway
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/bot-ai-gateway
+EnvironmentFile=-/opt/bot-ai-gateway/.env
+ExecStart=/usr/local/bin/node /opt/bot-ai-gateway/server.js
+Restart=always
+RestartSec=2
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
