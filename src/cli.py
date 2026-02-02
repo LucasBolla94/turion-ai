@@ -37,6 +37,18 @@ def _systemctl_is_active(service: str) -> tuple[bool, str]:
     ok = result.returncode == 0
     return ok, result.stdout.strip() or result.stderr.strip()
 
+def _systemctl_restart(service: str) -> tuple[bool, str]:
+    if not _which("systemctl"):
+        return False, "systemctl não encontrado"
+    result = _run(["systemctl", "restart", service])
+    ok = result.returncode == 0
+    return ok, result.stdout.strip() or result.stderr.strip()
+
+def _systemctl_logs(service: str, lines: int = 100) -> str:
+    if not _which("journalctl"):
+        return "journalctl não encontrado"
+    result = _run(["journalctl", "-u", service, "-n", str(lines), "--no-pager"])
+    return result.stdout.strip() or result.stderr.strip()
 
 def _check_gateway(url: str) -> tuple[bool, str]:
     try:
@@ -113,6 +125,25 @@ def doctor_all() -> int:
 
     db_ok, db_detail = _check_db(settings)
     results.append(CheckResult("db", db_ok, db_detail))
+
+    # attempt basic fixes
+    if not daemon_ok:
+        _systemctl_restart("bot-ai.service")
+    if not gw_ok:
+        _systemctl_restart("bot-ai-gateway.service")
+
+    # recheck after restart
+    daemon_ok2, daemon_detail2 = _systemctl_is_active("bot-ai.service")
+    gw_ok2, gw_detail2 = _systemctl_is_active("bot-ai-gateway.service")
+    if daemon_ok != daemon_ok2:
+        results.append(CheckResult("bot-ai.service (recheck)", daemon_ok2, daemon_detail2))
+    if gw_ok != gw_ok2:
+        results.append(CheckResult("bot-ai-gateway.service (recheck)", gw_ok2, gw_detail2))
+
+    if not daemon_ok2:
+        results.append(CheckResult("bot-ai.service logs", False, _systemctl_logs("bot-ai.service", 80)))
+    if not gw_ok2:
+        results.append(CheckResult("bot-ai-gateway.service logs", False, _systemctl_logs("bot-ai-gateway.service", 80)))
 
     ok_all = True
     for r in results:

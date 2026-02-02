@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import sys
+import subprocess
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -103,7 +104,32 @@ def _wait_gateway_ready(gateway_url: str, api_key: str | None, timeout_sec: int 
     return False
 
 
+def _service_active(name: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", name],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def _preflight_services() -> bool:
+    ok = True
+    for svc in ["bot-ai.service", "bot-ai-gateway.service"]:
+        if not _service_active(svc):
+            ok = False
+    return ok
+
+
 def _run_qr_flow(settings: Settings) -> None:
+    if not _preflight_services():
+        print("Serviços não estão ativos. Rode: turion doctor")
+        return
+
     print("Conecte o WhatsApp escaneando o QR abaixo.\n")
 
     gateway_url = settings.whatsapp_gateway_url or ""
