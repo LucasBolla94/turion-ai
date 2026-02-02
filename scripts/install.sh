@@ -87,6 +87,26 @@ PY
 
 install_node_lts
 
+open_firewall_ports() {
+  # Gateway port (WhatsApp)
+  local PORT="3001"
+
+  if command -v ufw >/dev/null 2>&1; then
+    if ufw status | grep -qi "Status: active"; then
+      ufw allow "${PORT}/tcp" >/dev/null 2>&1 || true
+    fi
+  fi
+
+  if command -v firewall-cmd >/dev/null 2>&1; then
+    if firewall-cmd --state >/dev/null 2>&1; then
+      firewall-cmd --permanent --add-port="${PORT}/tcp" >/dev/null 2>&1 || true
+      firewall-cmd --reload >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
+open_firewall_ports
+
 mkdir -p "$APP_DIR"
 cp -r ./* "$APP_DIR"
 
