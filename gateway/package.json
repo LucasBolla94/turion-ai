@@ -1,0 +1,16 @@
+﻿{
+  "name": "bot-ai-whatsapp-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "express": "^4.19.2",
+    "pino": "^9.2.0",
+    "ws": "^8.17.1"
+  }
+}

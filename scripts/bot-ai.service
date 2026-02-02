@@ -1,0 +1,14 @@
+﻿[Unit]
+Description=Bot AI Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/bot-ai/src/daemon_main.py
+Restart=always
+RestartSec=2
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,37 @@
+﻿# Bot AI (Python)
+
+Estrutura base para um "cérebro" de IA que coordena ferramentas, memória e execução no desktop/headless.
+
+## Estrutura
+- `src/core`: orquestração, loop principal
+- `src/adapters`: integrações externas (LLM, APIs)
+- `src/drivers`: drivers de SO/desktop
+- `src/skills`: habilidades atômicas
+- `src/memory`: memória local
+- `src/config`: carregamento de config
+- `src/channels`: canais de comunicação (WhatsApp, Telegram, etc.)
+- `src/daemon_main.py`: daemon (cérebro) em background
+- `src/tui_main.py`: TUI cliente simples
+- `gateway/`: WhatsApp Gateway (Node + Baileys)
+
+## Instalar cérebro no Ubuntu (systemd)
+```bash
+chmod +x scripts/install.sh
+sudo ./scripts/install.sh
+```
+
+## Instalar gateway WhatsApp (Node + Baileys)
+```bash
+cd gateway
+chmod +x install.sh
+sudo ./install.sh
+```
+
+## Rodar manual
+```bash
+python3 src/daemon_main.py
+python3 src/tui_main.py
+```
+
+## Variáveis de ambiente
+Veja `.env.example`.

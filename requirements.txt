@@ -1,0 +1,4 @@
+﻿python-dotenv
+pydantic
+requests
+websockets
