@@ -189,41 +189,24 @@ def _run_qr_flow(settings: Settings) -> bool:
         print("  sudo journalctl -u bot-ai-gateway.service -f")
         return False
 
-    # initial QR fetch before websocket
+    # simple and reliable: HTTP polling only
     last_qr = None
-    for _ in range(8):
-        qr_text = _fetch_qr(gateway_url, settings.whatsapp_api_key)
-        if qr_text:
-            _render_qr(qr_text)
-            last_qr = qr_text
-            break
-        time.sleep(2)
-
-    # wait until user connects; show updated QR whenever gateway sends
     while True:
-        try:
-            connected = asyncio.run(_listen_events(gateway_url, settings.whatsapp_api_key))
-            if connected:
-                return True
-        except Exception as exc:
-            print(f"Não foi possível escutar eventos do gateway: {exc}.")
-            print("Usando fallback HTTP para QR/status.")
-            while True:
-                status = _fetch_status(gateway_url, settings.whatsapp_api_key)
-                if status == "connected":
-                    print("WhatsApp conectado.\n")
-                    return True
-                qr_text = _fetch_qr(gateway_url, settings.whatsapp_api_key)
-                if qr_text and qr_text != last_qr:
-                    last_qr = qr_text
-                    _render_qr(qr_text)
-                    print("Leia o QR no WhatsApp para conectar.")
-                if not qr_text:
-                    print("QR ainda não gerado. Últimos logs do gateway:")
-                    logs = _service_logs("bot-ai-gateway.service", 40)
-                    if logs:
-                        print(logs)
-                time.sleep(3)
+        status = _fetch_status(gateway_url, settings.whatsapp_api_key)
+        if status == "connected":
+            print("WhatsApp conectado.\n")
+            return True
+        qr_text = _fetch_qr(gateway_url, settings.whatsapp_api_key)
+        if qr_text and qr_text != last_qr:
+            last_qr = qr_text
+            _render_qr(qr_text)
+            print("Leia o QR no WhatsApp para conectar.")
+        if not qr_text:
+            print("QR ainda não gerado. Últimos logs do gateway:")
+            logs = _service_logs("bot-ai-gateway.service", 40)
+            if logs:
+                print(logs)
+        time.sleep(3)
 
 
 def _save_profile(settings: Settings, answers: SetupAnswers) -> None:
@@ -291,7 +274,11 @@ def run_setup() -> int:
         print("WHATSAPP_GATEWAY_URL não configurado no .env")
         return 1
 
-    if not _run_qr_flow(settings):
+    try:
+        if not _run_qr_flow(settings):
+            return 1
+    except KeyboardInterrupt:
+        print("\nSetup cancelado pelo usuário.")
         return 1
 
     answers = SetupAnswers(
