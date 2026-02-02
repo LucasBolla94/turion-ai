@@ -120,7 +120,7 @@ class MemoryService:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                select user_id, persona, preferences, style, updated_at
+                select user_id, persona, preferences, style, language, updated_at
                 from user_profiles
                 where user_id = %s
                 limit 1
@@ -135,6 +135,7 @@ class MemoryService:
             persona=row.get("persona"),
             preferences=row.get("preferences"),
             style=row.get("style"),
+            language=row.get("language"),
             updated_at=row.get("updated_at"),
         )
 
@@ -145,13 +146,14 @@ class MemoryService:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                insert into user_profiles (user_id, persona, preferences, style, updated_at)
-                values (%s, %s, %s, %s, %s)
+                insert into user_profiles (user_id, persona, preferences, style, language, updated_at)
+                values (%s, %s, %s, %s, %s, %s)
                 on conflict (user_id)
                 do update set
                     persona = excluded.persona,
                     preferences = excluded.preferences,
                     style = excluded.style,
+                    language = excluded.language,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -159,6 +161,7 @@ class MemoryService:
                     profile.persona,
                     profile.preferences,
                     profile.style,
+                    profile.language,
                     datetime.now(timezone.utc),
                 ),
             )

@@ -39,6 +39,9 @@ turion doctor db       # inspeção do banco
 turion setup
 ```
 
+## Prompt base
+- Template curto em `docs/prompt.md`
+
 ## Memória local (PostgreSQL)
 - SQL: `docs/postgres.sql`
 - Estratégia: `docs/memory.md`

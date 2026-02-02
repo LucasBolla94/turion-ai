@@ -29,3 +29,9 @@ Defina no `.env`:
 - `ROUTING_SHORTCUT_SIM`: reuse respostas similares
 - `GROK_WARMUP_MESSAGES`: acelerar adaptação inicial
 - `GROK_MAINTENANCE_EVERY`: manutenção periódica
+
+## Como economiza tokens
+- **Cache semântico**: perguntas muito parecidas reutilizam resposta recente.
+- **Recorte de contexto**: só os itens mais relevantes entram no prompt.
+- **Resumo local**: reduz histórico a poucas frases.
+- **Manutenção periódica**: Grok só é usado para atualizar perfil em intervalos.

@@ -17,5 +17,6 @@ create table if not exists user_profiles (
   persona text,
   preferences text,
   style text,
+  language text,
   updated_at timestamptz default now()
 );

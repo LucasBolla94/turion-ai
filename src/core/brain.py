@@ -52,6 +52,12 @@ class Brain:
 
         recent, relevant, summary = self.pipeline.build_context(user_id, message)
         profile = self.memory.get_profile(user_id)
+        language = self._resolve_language(message, profile)
+        if profile and language and profile.language != language:
+            profile.language = language
+            self.memory.upsert_profile(profile)
+        elif profile is None and language:
+            self.memory.upsert_profile(UserProfile(user_id=user_id, language=language))
 
         shortcut = self._shortcut_reply(message, recent)
         if shortcut:
@@ -63,7 +69,7 @@ class Brain:
             self.memory.add_message(user_id, "assistant", reply)
             return reply
 
-        prompt = self._build_prompt(message, summary, profile, relevant)
+        prompt = self._build_prompt(message, summary, profile, relevant, language)
         response = self.grok.generate(prompt)
 
         reply = response.text.strip() or "Ok."
@@ -89,7 +95,7 @@ class Brain:
         req = LLMRequest(
             system=(
                 "Extraia estilo, preferências e persona do usuário. "
-                "Responda em texto curto com três linhas: persona=..., style=..., preferences=..."
+                "Responda em texto curto com quatro linhas: persona=..., style=..., preferences=..., language=..."
             ),
             user="Atualize o perfil do usuário.",
             context=snippet,
@@ -104,6 +110,7 @@ class Brain:
         persona = None
         style = None
         preferences = None
+        language = None
         for line in text.splitlines():
             if "persona=" in line:
                 persona = line.split("persona=", 1)[1].strip()
@@ -111,9 +118,17 @@ class Brain:
                 style = line.split("style=", 1)[1].strip()
             if "preferences=" in line:
                 preferences = line.split("preferences=", 1)[1].strip()
-        if not any([persona, style, preferences]):
+            if "language=" in line:
+                language = line.split("language=", 1)[1].strip()
+        if not any([persona, style, preferences, language]):
             return None
-        return UserProfile(user_id=user_id, persona=persona, style=style, preferences=preferences)
+        return UserProfile(
+            user_id=user_id,
+            persona=persona,
+            style=style,
+            preferences=preferences,
+            language=language,
+        )
 
     def _shortcut_reply(self, message: str, recent: list[MemoryItem]) -> str | None:
         if fuzz is None:
@@ -141,6 +156,7 @@ class Brain:
         summary: str,
         profile: UserProfile | None,
         relevant: list[MemoryItem],
+        language: str | None,
     ) -> LLMRequest:
         persona = (
             "Você é um assistente útil e humano, adaptando-se ao usuário."
@@ -148,6 +164,7 @@ class Brain:
             else profile.persona
         )
         style = profile.style if profile and profile.style else "Responda de forma clara e objetiva."
+        lang_rule = f"Responda sempre em {language}." if language else "Responda no idioma do usuário."
 
         context_lines = []
         if summary:
@@ -158,7 +175,7 @@ class Brain:
         context = "\n".join(context_lines)
 
         return LLMRequest(
-            system=f"{persona}\n{style}",
+            system=f"{persona}\n{style}\n{lang_rule}",
             user=message,
             context=context,
             max_tokens=self.settings.llm_max_tokens,
@@ -168,3 +185,26 @@ class Brain:
         if summary:
             return f"Entendi. Resumo do contexto: {summary}"
         return "Entendi."
+
+    def _resolve_language(self, message: str, profile: UserProfile | None) -> str | None:
+        if profile and profile.language:
+            if self._looks_like_portuguese(message):
+                return "Portuguese"
+            if self._looks_like_english(message):
+                return "English"
+            return profile.language
+        if self._looks_like_portuguese(message):
+            return "Portuguese"
+        if self._looks_like_english(message):
+            return "English"
+        return None
+
+    def _looks_like_portuguese(self, text: str) -> bool:
+        markers = ["não", "que", "para", "você", "obrigado", "por favor", "preciso"]
+        t = text.lower()
+        return any(m in t for m in markers)
+
+    def _looks_like_english(self, text: str) -> bool:
+        markers = ["the", "and", "please", "thanks", "need", "help"]
+        t = text.lower()
+        return any(m in t for m in markers)

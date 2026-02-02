@@ -20,4 +20,5 @@ class UserProfile:
     persona: str | None = None
     preferences: str | None = None
     style: str | None = None
+    language: str | None = None
     updated_at: datetime | None = None
